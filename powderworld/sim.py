@@ -183,18 +183,18 @@ class PWSim(torch.nn.Module):
             rand_element = torch.rand((world.shape[0], 1, world.shape[2], world.shape[3]), device=self.device) # For self-element behavior.
             velocity_field = torch.clone(world[:, self.NUM_ELEMENTS+4:self.NUM_ELEMENTS+6])
             did_gravity = torch.zeros((world.shape[0], 1, world.shape[2], world.shape[3]), device=self.device)
-            
+
             info = Info(rand_movement, rand_interact, rand_element, velocity_field, did_gravity)
-            
-            if self.update_rules_jit is None:            
-                if not self.use_jit:
-                    self.update_rules_jit = self.update_rules
-                else:
+
+            if self.update_rules_jit is None:
+                if self.use_jit:
                     print("Slow run to compile JIT.")
-                    self.update_rules_jit = []
-                    for update_rule in self.update_rules:
-                        self.update_rules_jit.append(torch.jit.trace(update_rule, (world, info)))
-            
+                    self.update_rules_jit = [
+                        torch.jit.trace(update_rule, (world, info))
+                        for update_rule in self.update_rules
+                    ]
+                else:
+                    self.update_rules_jit = self.update_rules
             for update_rule in self.update_rules_jit:
                 world, info = update_rule(world, info)
         return world
@@ -591,13 +591,13 @@ class BehaviorVelocity(torch.nn.Module):
         self.pw = pw
     def forward(self, world, info):
         rand_movement, rand_interact, rand_element, velocity_field, did_gravity = info
-        for n in range(2):
+        for _ in range(2):
             velocity_field_magnitudes = torch.norm(velocity_field, dim=1)[:, None]
             velocity_field_angles_raw = (1/(2*torch.pi)) * torch.acos(velocity_field[:,1:2] / (velocity_field_magnitudes+0.001))
             is_y_lessthan_zero = (velocity_field[:,0:1] < 0)
             velocity_field_angle = interp(switch=is_y_lessthan_zero, if_false=velocity_field_angles_raw, if_true=(1 - velocity_field_angles_raw))
             velocity_field_delta = velocity_field.clone()
-            
+
             for angle in [0,1,2,3,4,5,6,7]:
                 is_angle_match = (torch.remainder(torch.floor(velocity_field_angle * 8 + 0.5), 8) == angle)
                 is_velocity_enough = (velocity_field_magnitudes > 0.1)
@@ -611,7 +611,7 @@ class BehaviorVelocity(torch.nn.Module):
 
                 angle_velocity_field = self.pw.direction_func(angle, velocity_field)
                 opposite_velocity_field = self.pw.direction_func((angle+4) % 8, velocity_field)
-                
+
                 velocity_field_delta[:] -= does_become_empty*velocity_field*0.5
                 velocity_field_delta[:] += does_become_opposite*opposite_velocity_field*0.5
             velocity_field = velocity_field_delta
@@ -619,7 +619,7 @@ class BehaviorVelocity(torch.nn.Module):
 
         # Velocity field reduction
         velocity_field *= 0.95
-        for i in range(1):
+        for _ in range(1):
             velocity_field[:, 0:1] = F.conv2d(velocity_field[:, 0:1], self.pw.neighbor_kernel/18, padding=1) + velocity_field[:, 0:1]*0.5
             velocity_field[:, 1:2] = F.conv2d(velocity_field[:, 1:2], self.pw.neighbor_kernel/18, padding=1) + velocity_field[:, 1:2]*0.5
         world[:, self.pw.NUM_ELEMENTS+4:self.pw.NUM_ELEMENTS+6] = velocity_field

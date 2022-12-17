@@ -76,11 +76,11 @@ class PWGeneralEnv(VecEnv):
     
     def apply_action(self, world, actions, force_elem=None):
         actions = self.parse_action(actions)
+        radius = 5
         for b in range(len(world)):
             x, y, elem, xdir, ydir = actions[b]
             if force_elem is not None:
                 elem = force_elem
-            radius = 5
             winddir = 20 * torch.Tensor([xdir, ydir]).to(self.device)[None,:,None,None]
             self.pw.add_element(world[b:b+1, :, lim(x-radius):lim(x+radius), lim(y-radius):lim(y+radius)], elem, winddir)
     
@@ -106,7 +106,7 @@ class PWGeneralEnv(VecEnv):
         from stable_baselines3.common import env_util
         if indices is None:
             indices = range(self.batch_size)
-        return [env_util.is_wrapped(self, wrapper_class) for i in indices]
+        return [env_util.is_wrapped(self, wrapper_class) for _ in indices]
 
 class PWDrawEnv(PWGeneralEnv):
     def __init__(self, test=False, kwargs_pcg=None, total_timesteps=64, batch_size=32, device=None, dense_reward=True, use_jit=True):
@@ -140,10 +140,10 @@ class PWDrawEnv(PWGeneralEnv):
                     
     def step_wait(self):
         self.apply_action(self.world, self.actions)
-        
+
         self.pw.add_element(self.world[:, :, 40:64, -20:-18], "wall")
-        
-        for t in range(3):
+
+        for _ in range(3):
             self.world = self.pw(self.world)
         self.timestep += 1
         ob = self.world.cpu().numpy()
@@ -156,8 +156,10 @@ class PWDrawEnv(PWGeneralEnv):
         return ob, rew, dones, info
     
     def get_rew(self):
-        rew = torch.sum(self.world[:, 3:4, 40:64, -20:], dim=(1,2,3)).cpu().numpy() / 150
-        return rew
+        return (
+            torch.sum(self.world[:, 3:4, 40:64, -20:], dim=(1, 2, 3)).cpu().numpy()
+            / 150
+        )
 
     def render(self, env_id=0, mode='rgb_array'):
         assert mode=='rgb_array'
@@ -200,9 +202,12 @@ class PWSandEnv(PWGeneralEnv):
         return ob, rew, dones, info
     
     def get_rew(self):
-        # measure the amount of sand in the goal area
-        rew = torch.sum(self.world[:, 2:3, 32-10:32+10, -10:], dim=(1,2,3)).cpu().numpy() / 150
-        return rew
+        return (
+            torch.sum(self.world[:, 2:3, 32 - 10 : 32 + 10, -10:], dim=(1, 2, 3))
+            .cpu()
+            .numpy()
+            / 150
+        )
     
     def render(self, env_id=0, mode='rgb_array'):
         assert mode=='rgb_array'
@@ -251,7 +256,7 @@ class PWDestroyEnv(PWGeneralEnv):
         # measure the amount of sand in the goal area
         rew = np.zeros(self.world.shape[0])
         if self.timestep >= self.total_timesteps:
-            for t in range(self.n_world_settle):
+            for _ in range(self.n_world_settle):
                 self.world = self.pw(self.world)
             rew = torch.sum(self.world[:, 0:1, :, :], dim=(1,2,3)).cpu().numpy() / 1000
         return rew
