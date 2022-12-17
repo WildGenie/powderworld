@@ -67,10 +67,10 @@ def make_empty_world(pw, world):
 def make_world(pw, world, elems=['empty','sand', 'water', 'wall'], num_tasks=1000000, num_lines=5, num_circles=0, num_squares=0):
     seed = np.random.randint(num_tasks)
     rand = np.random.RandomState(seed)
-    
+
     pw.add_element(world[:, :, :, :], "empty")
 
-    for s in range(rand.randint(0, num_lines+1)):
+    for _ in range(rand.randint(0, num_lines+1)):
         radius = rand.randint(1,10)
         elem = rand.choice(elems)
         x1 = rand.randint(64)
@@ -79,20 +79,20 @@ def make_world(pw, world, elems=['empty','sand', 'water', 'wall'], num_tasks=100
         y2 = rand.randint(64)
         rr, cc, _ = weighted_line(x1, y1, x2, y2, radius, 0, 64)
         pw.add_element_rc(world, rr, cc, elem)
-    for s in range(rand.randint(0, num_circles+1)):
+    for _ in range(rand.randint(0, num_circles+1)):
         radius = rand.randint(5,20)
         elem = rand.choice(elems)
         x1 = rand.randint(64)
         y1 = rand.randint(64)
         rr, cc = skimage.draw.disk((x1, y1), radius, shape=(64,64))
         pw.add_element_rc(world, rr, cc, elem)
-    for s in range(rand.randint(0, num_squares+1)):
+    for _ in range(rand.randint(0, num_squares+1)):
         radius = rand.randint(5,20)
         elem = rand.choice(elems)
         x1 = rand.randint(64)
         y1 = rand.randint(64)
         pw.add_element(world[:, :, lim(x1-radius):lim(x1+radius), lim(y1-radius):lim(y1+radius)], elem)
-        
+
     pw.add_element(world[:, :, 0:1, :], "wall")
     pw.add_element(world[:, :, 63:64, :], "wall")
     pw.add_element(world[:, :, :, 0:1], "wall")
@@ -176,12 +176,12 @@ def make_rl_world(pw, world, elems=['empty','sand', 'water', 'wall'], num_tasks=
     new_elems = elems.copy()
     if 'sand' in new_elems:
         new_elems.remove('sand')
-    
+
     pw.add_element(world[:, :, :, :], "empty")
     sandy = rand.randint(8,54)
     sandx = rand.randint(8,44)
 
-    for s in range(rand.randint(0, num_lines+1)):
+    for _ in range(rand.randint(0, num_lines+1)):
         radius = rand.randint(1,10)
         elem = rand.choice(new_elems)
         x1 = rand.randint(64)
@@ -190,20 +190,20 @@ def make_rl_world(pw, world, elems=['empty','sand', 'water', 'wall'], num_tasks=
         y2 = rand.randint(64)
         rr, cc, _ = weighted_line(x1, y1, x2, y2, radius, 0, 64)
         pw.add_element_rc(world, rr, cc, elem)
-    for s in range(rand.randint(0, num_circles+1)):
+    for _ in range(rand.randint(0, num_circles+1)):
         radius = rand.randint(5,20)
         elem = rand.choice(new_elems)
         x1 = rand.randint(64)
         y1 = rand.randint(64)
         rr, cc = skimage.draw.disk((x1, y1), radius, shape=(64,64))
         pw.add_element_rc(world, rr, cc, elem)
-    for s in range(rand.randint(0, num_squares+1)):
+    for _ in range(rand.randint(0, num_squares+1)):
         radius = rand.randint(5,20)
         elem = rand.choice(new_elems)
         x1 = rand.randint(64)
         y1 = rand.randint(64)
         pw.add_element(world[:, :, lim(x1-radius):lim(x1+radius), lim(y1-radius):lim(y1+radius)], elem)
-    
+
     # Wall
     pw.add_element(world[:, :, 0:1, :], "wall")
     pw.add_element(world[:, :, 63:64, :], "wall")
@@ -219,21 +219,17 @@ def make_rl_test(pw, world, test_num):
     pw.add_element(world[:, :, :, :], "empty")
     if test_num == 0:
         sandy = 32
-        sandx = 8
     elif test_num == 1:
         pw.add_element(world[:, :, 16:48, 32:36], "wall")
         sandy = 32
-        sandx = 8
     elif test_num == 2:
         pw.add_element(world[:, :, :, :], "wall")
         sandy = 8
-        sandx = 8
         rr, cc, _ = weighted_line(0, 0, 32, 63, 15, 0, 64)
         pw.add_element_rc(world, rr, cc, 'empty')
     elif test_num == 3:
         pw.add_element(world[:, :, :, :], "wall")
         sandy = 32
-        sandx = 8
         rr, cc, _ = weighted_line(32, 8, 0, 8, 25, 0, 64)
         pw.add_element_rc(world, rr, cc, 'empty')
         rr, cc, _ = weighted_line(8, 8, 8, 50, 25, 0, 64)
@@ -242,27 +238,23 @@ def make_rl_test(pw, world, test_num):
         pw.add_element_rc(world, rr, cc, 'empty')
     elif test_num == 4:
         sandy = 54
-        sandx = 8
         pw.add_element(world[:, :, 40:64, :], "water")
     elif test_num == 5:
         sandy = 32
-        sandx = 8
         pw.add_element(world[:, :, 40:64, 0:16], "wall")
         pw.add_element(world[:, :, :, 30:40], "plant")
         pw.add_element(world[:, :, 55:64, 40:45], "wall")
         pw.add_element(world[:, :, 55:64, 45:], "lava")
     elif test_num == 6:
         sandy = 32
-        sandx = 8
         pw.add_element(world[:, :, 40:64, 0:16], "wall")
         pw.add_element(world[:, :, :, 30:45], "stone")
     elif test_num == 7:
         sandy = 32
-        sandx = 8
         pw.add_element(world[:, :, 42:44, :], "lava")
         pw.add_element(world[:, :, 44:46, :], "stone")
         pw.add_element(world[:, :, 46:, :], "dust")
-        
+
         pw.add_element(world[:, :, :20, :], "lava")
         pw.add_element(world[:, :, 20:22, :], "stone")
         pw.add_element(world[:, :, 22:24:, :], "dust")
@@ -270,8 +262,7 @@ def make_rl_test(pw, world, test_num):
         pw.add_element(world[:, :, :26, 40:], "wall")
     else:
         sandy = 32
-        sandx = 8
-    
+    sandx = 8
     # Wall
     pw.add_element(world[:, :, 0:1, :], "wall")
     pw.add_element(world[:, :, 63:64, :], "wall")
